@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "package": "com.vivetacz.client.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "minVersion": "0.8",
+  "client": [
+    "GunItemRendererWrapperMixin",
+    "AmmoItemRendererMixin"
+  ],
+  "mixins": [
+    "ModernKineticGunItemMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

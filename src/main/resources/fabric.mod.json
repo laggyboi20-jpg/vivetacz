@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "vivetacz",
+  "version": "${version}",
+  "name": "ViveTaCZ",
+  "description": "VR support for TaCZ Refabricated via Vivecraft: hand-attached animated gun models, physical aiming, and working scope zoom.",
+  "authors": ["Laggy"],
+  "contact": {
+    "homepage": "https://github.com/laggyboi20-jpg/vivetacz",
+    "sources":  "https://github.com/laggyboi20-jpg/vivetacz"
+  },
+  "license": "GPL-3.0-or-later",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["com.vivetacz.ViveTaCZClient"],
+    "modmenu": ["com.vivetacz.config.ViveTaczModMenu"]
+  },
+  "mixins": [
+    "vivetacz.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.14.0",
+    "minecraft":    "~1.20.1",
+    "java":         ">=17",
+    "tacz":         "*"
+  },
+  "suggests": {
+    "vivecraft": "*",
+    "modmenu": "*",
+    "cloth-config": "*"
+  }
+}

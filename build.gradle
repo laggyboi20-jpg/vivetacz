@@ -1,0 +1,74 @@
+plugins {
+    id 'fabric-loom' version '1.10-SNAPSHOT'
+}
+
+version = project.mod_version
+group   = project.maven_group
+
+base {
+    archivesName = project.archives_base_name
+}
+
+repositories {
+    maven { url "https://api.modrinth.com/maven" }
+    maven { url "https://jitpack.io" }
+}
+
+dependencies {
+    minecraft         "com.mojang:minecraft:${project.minecraft_version}"
+    mappings          "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+    // Config UI: compile against Cloth Config + Mod Menu (both supplied at runtime by
+    // the player). modCompileOnly so they aren't bundled and the mod still loads without
+    // them (the Mod Menu entrypoint simply won't be visited).
+    modCompileOnly "maven.modrinth:cloth-config:11.1.136+fabric"
+    modCompileOnly "maven.modrinth:modmenu:7.2.2"
+
+    // NOTE: TaCZ Refabricated is deliberately NOT a Gradle dependency.
+    // Its distributed jar bundles ~54 nested mods and ships in a mapping that
+    // Loom cannot remap cleanly (render/method_3166 conflicts). Instead we
+    // target its classes by string in Mixins and call into it via reflection
+    // (see com.vivetacz.compat.TaczBridge). Players supply TaCZ at runtime.
+    //
+    // Vivecraft is likewise wired purely by reflection (com.vivetacz.vr.VivecraftBridge)
+    // so the mod loads fine without either mod present at build time.
+
+    // OpenVR natives (match what Vivecraft bundles) — runtime only, dev convenience.
+    runtimeOnly "org.lwjgl:lwjgl-openvr:${project.lwjgl_version}"
+    runtimeOnly "org.lwjgl:lwjgl-openvr:${project.lwjgl_version}:natives-windows"
+}
+
+loom {
+    mixin {
+        useLegacyMixinAp = false
+    }
+}
+
+processResources {
+    inputs.property "version", project.version
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.release = 17
+}
+
+// No tests — disable to avoid Gradle/Java version friction
+tasks.named("test").configure {
+    enabled = false
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+jar {
+    from("LICENSE") {
+        rename { "${it}_${archiveBaseName.get()}" }
+    }
+}
