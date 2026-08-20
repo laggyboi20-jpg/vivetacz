@@ -56,7 +56,7 @@ public final class ViveTaczConfig {
 
     /** Freeze the gun body's animation: no idle/run sway, and during reload the gun stays
      *  put while only its magazine/bolt/child parts animate. */
-    public boolean staticGunBody = false;
+    public boolean staticGunBody = true;
 
     public Placement defaultGun = Placement.gunDefault();
     public Placement ammo = Placement.ammoDefault();
@@ -65,6 +65,18 @@ public final class ViveTaczConfig {
     private static Map<String, Placement> defaultPerGun() {
         Map<String, Placement> m = new HashMap<>();
         m.put("tacz:minigun", new Placement(-1.27f, -0.5f, -0.652f, 180.0f, -44.0f, 0.0f, 1.4f));
+        return m;
+    }
+
+    private static Map<String, Placement> defaultPerGunReloadZone() {
+        Map<String, Placement> m = new HashMap<>();
+        m.put("tacz:minigun", Placement.reloadZoneDefault());
+        return m;
+    }
+
+    private static Map<String, Placement> defaultPerGunAimOffset() {
+        Map<String, Placement> m = new HashMap<>();
+        m.put("tacz:minigun", Placement.aimOffsetDefault());
         return m;
     }
 
@@ -90,9 +102,12 @@ public final class ViveTaczConfig {
     /** Default "insert the mag" zone relative to the gun hand (posX/Y/Z used). */
     public Placement reloadZone = Placement.reloadZoneDefault();
     /** Per-gun reload-zone overrides (mag wells differ per gun). */
-    public Map<String, Placement> perGunReloadZone = new HashMap<>();
+    public Map<String, Placement> perGunReloadZone = defaultPerGunReloadZone();
     /** Draw a marker showing the insert zone while holding a gun. */
-    public boolean showReloadZone = true;
+    public boolean showReloadZone = false;
+    /** Keep the gun rendered at the controller while a menu/config screen is open (Vivecraft
+     *  normally hides the held item then) — so you can align mags/zones as you edit the sliders. */
+    public boolean showGunInMenu = false;
 
     /** Minimum seconds between reloads (grab a new mag) to stop accidental spamming. */
     public float magCooldownSeconds = 5.0f;
@@ -101,13 +116,13 @@ public final class ViveTaczConfig {
     public boolean controllerAim = true;
     /** Degrees the barrel sits below the controller's pointing axis. Legacy single-axis knob;
      *  migrated into {@link #aimOffset}.pitch on load. Kept for old-config compatibility. */
-    public float aimPitchOffset = 40.0f;
+    public float aimPitchOffset = 0.0f;
     /** Default aim offset (controller-forward → barrel): yaw/pitch/roll, pitch positive = down. */
     public Placement aimOffset = Placement.aimOffsetDefault();
     /** Per-gun aim-offset overrides (each gun's barrel sits at its own angle in the hand). */
-    public Map<String, Placement> perGunAimOffset = new HashMap<>();
+    public Map<String, Placement> perGunAimOffset = defaultPerGunAimOffset();
     /** Draw a client-side tracer from the barrel to the impact point on each shot. */
-    public boolean tracerFromBarrel = true;
+    public boolean tracerFromBarrel = false;
 
     /** Recoil climb strength. 0 = no recoil, 1 = default, higher = more kick. */
     public float recoilMultiplier = 1.0f;

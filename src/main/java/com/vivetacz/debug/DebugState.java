@@ -43,6 +43,9 @@ public final class DebugState {
 
     private DebugState() {}
 
+    private static int lastAmmoLogged = Integer.MIN_VALUE;
+    private static String lastAmmoGun = "";
+
     /** Streamed a few times a second so aim can be watched without firing. */
     public static void onClientTick(MinecraftClient mc) {
         if (!DebugLog.enabled()) return;
@@ -61,6 +64,43 @@ public final class DebugState {
                 "gun=%s main=%s mainRot=%s off=%s barrel=%s",
                 gunId, DebugLog.v(b.getMainHandPos()), DebugLog.q(b.getMainHandRotation()),
                 DebugLog.v(b.getOffHandPos()), DebugLog.v(barrel));
+
+        logAmmoOnChange(mc, gun, gunId);
+    }
+
+    /**
+     * When the ammo changes, dump the full picture so the count can be reconciled:
+     * client raw mag count, the number our HUD (= TaCZ's desktop HUD) shows, the flags
+     * that drive it, and what the integrated server believes is loaded.
+     */
+    private static void logAmmoOnChange(MinecraftClient mc, ItemStack gun, String gunId) {
+        Object item = gun.getItem();
+        int raw = TaczBridge.getCurrentAmmoCount(item, gun);
+        int display = TaczBridge.getDisplayAmmoCount(item, gun);
+        if (display == lastAmmoLogged && gunId.equals(lastAmmoGun)) return;
+        lastAmmoLogged = display;
+        lastAmmoGun = gunId;
+
+        DebugLog.logf("AMMO", "gun=%s clientRaw=%d hud/desktop=%d (barrel=%b openBolt=%b invFed=%b dummy=%b)",
+                gunId, raw, display,
+                TaczBridge.hasBulletInBarrel(item, gun), TaczBridge.isOpenBolt(item, gun),
+                TaczBridge.useInventoryAmmo(item, gun), TaczBridge.useDummyAmmo(item, gun));
+
+        // Server-side count (integrated server, singleplayer) — read on the server thread.
+        net.minecraft.server.integrated.IntegratedServer server = mc.getServer();
+        if (server != null && mc.player != null) {
+            java.util.UUID uuid = mc.player.getUuid();
+            server.execute(() -> {
+                net.minecraft.server.network.ServerPlayerEntity sp = server.getPlayerManager().getPlayer(uuid);
+                if (sp == null) return;
+                ItemStack g = sp.getMainHandStack();
+                if (g != null && TaczBridge.isGun(g.getItem())) {
+                    DebugLog.logf("AMMO", "  server currentAmmoCount=%d display=%d (gun=%s)",
+                            TaczBridge.getCurrentAmmoCount(g.getItem(), g),
+                            TaczBridge.getDisplayAmmoCount(g.getItem(), g), gunId);
+                }
+            });
+        }
     }
 
     /** Full one-shot snapshot of poses, held gun, and every resolved zone/offset. */
@@ -93,10 +133,15 @@ public final class DebugState {
         String gunId = TaczBridge.getGunId(gun.getItem(), gun);
         Placement aim = cfg.aimOffsetFor(gunId);
 
-        DebugLog.logf("DUMP", "gun=%s ammo=%d fireMode=%s heat=%.2f", gunId,
+        DebugLog.logf("DUMP", "gun=%s ammoRaw=%d hud/desktop=%d fireMode=%s heat=%.2f (barrel=%b openBolt=%b invFed=%b)",
+                gunId,
                 TaczBridge.getCurrentAmmoCount(gun.getItem(), gun),
+                TaczBridge.getDisplayAmmoCount(gun.getItem(), gun),
                 TaczBridge.getFireMode(gun.getItem(), gun),
-                TaczBridge.getHeatPercent(gun.getItem(), gun));
+                TaczBridge.getHeatPercent(gun.getItem(), gun),
+                TaczBridge.hasBulletInBarrel(gun.getItem(), gun),
+                TaczBridge.isOpenBolt(gun.getItem(), gun),
+                TaczBridge.useInventoryAmmo(gun.getItem(), gun));
         DebugLog.logf("DUMP", "placement=%s", place(cfg.gunPlacement(gunId)));
         DebugLog.logf("DUMP", "aimOffset=%s barrelDir=%s", place(aim), DebugLog.v(AimUtil.barrelDir(b, aim)));
         DebugLog.logf("DUMP", "reloadZone world=%s (%s)",

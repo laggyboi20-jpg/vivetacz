@@ -63,6 +63,10 @@ public final class MagazineReload {
     private static ItemStack magStack = ItemStack.EMPTY;
     private static long lastReloadMs = 0L;    // for the grab cooldown
 
+    // The gun (hotbar slot + id) the carried mag was grabbed for; switching guns drops it.
+    private static int lastSlot = -1;
+    private static String lastGunKey = "";
+
     private MagazineReload() {}
 
     /** True while the two-stage reload has the mag ejected (so the gun renders empty). */
@@ -122,6 +126,28 @@ public final class MagazineReload {
         ItemStack gun = player.getMainHandStack();
         if (gun == null || !TaczBridge.isGun(gun.getItem())) { held = false; magDropped = false; return; }
 
+        // A carried mag belongs to the gun you grabbed it for. If you switch hotbar slots or
+        // to a different gun, drop it (it vanishes from the off hand) so a wrong-gun mag never
+        // carries over. Checked before the magazine-fed gate so switching to e.g. the minigun
+        // still clears a previously held mag.
+        int slot = player.getInventory().selectedSlot;
+        String gunKey = TaczBridge.getGunId(gun.getItem(), gun);
+        if (gunKey == null) gunKey = "";
+        if (slot != lastSlot || !gunKey.equals(lastGunKey)) {
+            held = false;
+            magDropped = false;
+            lastSlot = slot;
+            lastGunKey = gunKey;
+        }
+
+        // Only magazine-fed guns get the physical mag drop/insert. Inventory-fed guns like the
+        // minigun have no removable mag, and forcing their ammo to 0 corrupts them into
+        // single-shot — so we leave them entirely to TaCZ's own reload.
+        if (!TaczBridge.isMagazineFed(gun.getItem(), gun)) {
+            held = false; magDropped = false; active = false;
+            return;
+        }
+
         magStack = ammoBoxStack();
         if (magStack.isEmpty()) { held = false; return; }
         active = true;
@@ -159,8 +185,11 @@ public final class MagazineReload {
             // Insert: bring the held mag to the gun's (per-gun) reload zone → reload.
             Vec3d zone = magAnchor(bridge, cfg.reloadZoneFor(gunId));
             if (zone != null && offHand.distanceTo(zone) <= cfg.reloadGestureDistance) {
-                // In two-stage mode, only reload once the old mag has been dropped.
-                if (!cfg.twoStageReload || magDropped) {
+                // In two-stage mode, only reload once the old mag has been dropped — except
+                // open-bolt guns (RPG, break-action, single-shot) don't chamber, so they skip
+                // the drop step and reload on a plain insert.
+                boolean openBolt = TaczBridge.isOpenBolt(gun.getItem(), gun);
+                if (!cfg.twoStageReload || magDropped || openBolt) {
                     TaczBridge.triggerReload(player);
                     closeVrHotbar(mc);
                     lastReloadMs = System.currentTimeMillis();

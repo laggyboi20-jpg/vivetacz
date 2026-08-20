@@ -11,6 +11,87 @@ VR support for **[TaCZ Refabricated]** (Timeless & Classics Zero, Fabric port) v
    reload is a planned follow-up.
 3. **Scopes actually zoom** — planned; see *Roadmap*.
 
+## Features
+
+What ViveTaCZ does once you're in VR with TaCZ installed:
+
+**Rendering**
+- **Animated gun in your hand** — the first-person gun is drawn at your main-hand
+  controller with its animation state machine ticking, so reload / fire / inspect / bolt
+  animations actually play (Vivecraft alone shows only the static model).
+- **Correctly-placed ammo items** — magazines and ammo boxes held in VR also get proper
+  in-hand placement, not the default flat-item pose.
+- **Static-body option** — freeze the gun's idle/run sway so only the moving parts
+  (magazine, bolt, slide, charging handle…) animate.
+- **Force high-poly model** — keeps the animated model on screen instead of TaCZ's
+  distant static LOD.
+
+**Shooting**
+- **Physical controller aiming** — bullets leave the actual barrel along the direction
+  your controller points, with a per-gun yaw/pitch/roll calibration, instead of firing
+  where your head looks. No more eye-to-gun parallax.
+- **Muzzle bullet origin** — the bullet spawns at the muzzle, not your eye.
+- **Recoil** — the muzzle climbs (and drifts slightly) per shot and recovers over time;
+  strength is adjustable.
+- **Muzzle tracers** — an optional short-lived beam drawn from the barrel to the impact
+  point, matched to the recoil-adjusted bullet path.
+- **Recoil haptics** — the gun-hand controller buzzes on each shot.
+
+**HUD**
+- **Floating gun HUD** — ammo count, fire mode, and (for heat guns like the minigun) a
+  heat/overheat bar, drawn next to the gun. The ammo count matches TaCZ's own desktop HUD,
+  including the chambered "+1" round on closed-bolt guns.
+
+**Reloading** (two modes — pick one in the config)
+- **Proximity gesture** — bring your off hand to the gun to trigger a reload.
+- **Physical magazine** — a magazine sits by your gun; reach your off hand to grab it, then
+  bring it up to the gun's mag well to seat it and reload.
+  - A translucent **ghost of the gun's real magazine** marks the insert zone (green when
+    ready to seat).
+  - Optional **two-stage reload**: press *Drop Magazine* to eject the old mag first, then
+    insert a fresh one.
+  - **Per-gun reload zones and mag placement**, so each gun's mag well lines up.
+  - Wrong-gun magazines are **auto-dropped when you switch weapons**; inventory-fed guns
+    (e.g. the minigun) are left to TaCZ's own reload so they aren't corrupted.
+  - A **grab cooldown** stops accidental reload spam.
+
+**Quality-of-life**
+- **Keep the gun visible while the config menu is open**, so you can align placements live.
+- **Full in-game configuration** via Mod Menu (Cloth Config) — every option below is
+  live-tunable and most support per-gun overrides.
+- **Opt-in debug logging** to `logs/vivetacz-debug.log` for tuning aim/placement from real
+  numbers, plus a *Dump State* key for a one-shot snapshot.
+- **Safe when idle** — the Vivecraft link is reflection-only, so the mod loads inert with no
+  Vivecraft installed or in desktop mode and never affects normal (non-VR) TaCZ.
+
+## Controls
+
+Two keybinds (bind them to controller buttons in Vivecraft's controls; defaults are for
+desktop testing):
+
+| Action | Default | What it does |
+| --- | --- | --- |
+| **Drop Magazine** | `V` | Ejects the current mag in two-stage reload mode. |
+| **Debug: Dump State** | `P` | Writes a full state snapshot to the debug log (needs debug logging on). |
+
+## Configuration
+
+Everything is editable in-game via **Mod Menu → ViveTaCZ**, and persisted to
+`config/vivetacz.json`.
+
+- **Master:** enable/disable the whole mod.
+- **Gun rendering:** static gun body toggle; default gun placement (position / rotation /
+  scale) + per-gun overrides; ammo-item placement.
+- **HUD:** enable toggle + HUD placement.
+- **Aiming:** controller aim toggle; aim offset (yaw/pitch/roll) + per-gun aim overrides;
+  recoil strength; barrel tracer toggle; haptic feedback toggle.
+- **Reloading:** proximity-gesture toggle + trigger distance; physical-magazine toggle;
+  magazine-pouch placement; held-magazine placement; grab distance; two-stage toggle;
+  reload-zone placement + per-gun reload zones; show-reload-zone marker toggle; reload
+  cooldown.
+- **Menu:** keep the gun rendered while a config screen is open.
+- **Debug:** verbose logging toggle.
+
 ## How it works
 
 TaCZ ticks its gun animation state machine and draws the animated model only inside
@@ -31,17 +112,19 @@ affects normal (non-VR) TaCZ.
 ## Roadmap
 
 - [x] Animated gun renders at the controller in VR (goal #1, reload-anim half of #2)
+- [x] **Physical aiming** — bullets fire along the controller barrel (per-gun aim offset)
+      instead of the camera look vector.
+- [x] Recoil + recoil haptics.
+- [x] Physical reload (grab magazine with off-hand, insert; optional two-stage drop).
+- [x] Freeze TaCZ's idle/run sway in VR (the *static gun body* option).
 - [ ] **Verify the render seam in-game** — the first VR gun render logs the exact
       Vivecraft `ModelTransformationMode`; confirm and tighten `isHandContext` to it.
-- [ ] Strip TaCZ's camera-relative view-sway when in VR (it double-applies over the
-      controller pose; see `renderFirstPerson` lines that read player pitch/yaw).
-- [ ] **Physical aiming** — fire along the gun barrel (main-hand, or main→off-hand for
-      two-handed hold) instead of the camera look vector (`LocalPlayerShoot.shoot`).
+- [ ] **Two-handed hold aiming** — aim main→off-hand for two-handed guns.
 - [ ] **Scope zoom in VR** (goal #3) — TaCZ scopes are only an FOV multiplier
       (`CameraSetupEvent.applyScopeMagnification`), which Vivecraft ignores per-eye.
       Route through Vivecraft's telescope/zoom or a scope render target instead.
-- [ ] Recoil haptics via `VivecraftBridge` / `triggerHapticPulse`.
-- [ ] Full physical reload (grab magazine with off-hand, insert, rack bolt).
+- [ ] Rack the bolt / charging handle as its own reload gesture.
+- [ ] Multiplayer / dedicated-server aim (the aim override is singleplayer-only today).
 
 ## Build
 

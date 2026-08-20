@@ -35,7 +35,6 @@ import java.lang.reflect.Method;
  * Confirmed method chain (Vivecraft 1.20.1-1.3.9-fabric):
  *   VRClientAPI.instance()             -> VRClientAPI singleton (static)
  *   VRClientAPI.isVRActive()           -> boolean
- *   VRClientAPI.isLeftHanded()         -> boolean
  *   VRClientAPI.getWorldRenderPose()   -> VRPose (nullable — null when not in VR)
  *   VRPose.getMainHand()/getOffHand()/getHead() -> VRBodyPartData
  *   VRBodyPartData.getPos()            -> Vec3d (class_243, world-space)
@@ -51,7 +50,6 @@ public final class VivecraftBridge {
     private Object apiInstance = null;
 
     private Method mIsVRActive         = null;
-    private Method mIsLeftHanded       = null;
     private Method mGetWorldRenderPose = null;
     private Method mGetMainHand        = null;
     private Method mGetOffHand         = null;
@@ -92,7 +90,6 @@ public final class VivecraftBridge {
             mGetPos             = bodyPartClass.getMethod("getPos");
 
             // Optional extras — tolerate their absence on odd versions.
-            mIsLeftHanded = optional(apiClass, "isLeftHanded");
             mGetRotation  = optional(bodyPartClass, "getRotation");
             mGetDir       = optional(bodyPartClass, "getDir");
 
@@ -176,17 +173,6 @@ public final class VivecraftBridge {
             mTriggerHaptic.invoke(apiInstance, bodyPartMainHandEnum,
                     durationSeconds, frequency, amplitude, 0.0f);
         } catch (Throwable ignored) {
-        }
-    }
-
-    /** True when the player's dominant hand is the left one. */
-    public boolean isLeftHanded() {
-        initIfNeeded();
-        if (!vivecraftAvailable || mIsLeftHanded == null) return false;
-        try {
-            return (boolean) mIsLeftHanded.invoke(apiInstance);
-        } catch (Exception e) {
-            return false;
         }
     }
 

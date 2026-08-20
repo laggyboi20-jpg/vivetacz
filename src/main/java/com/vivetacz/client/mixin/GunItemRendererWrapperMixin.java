@@ -164,8 +164,9 @@ public abstract class GunItemRendererWrapperMixin {
                                            VertexConsumerProvider buffer, int light, ViveTaczConfig cfg) {
         Object item = stack.getItem();
 
-        // Ammo line: "<count>  <fireMode>"
-        int ammo = TaczBridge.getCurrentAmmoCount(item, stack);
+        // Ammo line: "<count>  <fireMode>". Count matches TaCZ's own HUD exactly — mag plus the
+        // chambered round, but only for closed/manual-bolt guns (open-bolt guns don't chamber).
+        int ammo = TaczBridge.getDisplayAmmoCount(item, stack);
         String mode = TaczBridge.getFireMode(item, stack);
         StringBuilder ammoLine = new StringBuilder();
         if (ammo >= 0) ammoLine.append(ammo);

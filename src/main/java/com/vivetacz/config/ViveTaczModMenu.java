@@ -98,6 +98,12 @@ public class ViveTaczModMenu implements ModMenuApi {
                     .setTooltip(Text.literal("A marker where you bring the mag to reload (green when ready)."))
                     .setSaveConsumer(v -> cfg.showReloadZone = v)
                     .build());
+            general.addEntry(eb.startBooleanToggle(Text.literal("Show gun while config menu is open"), cfg.showGunInMenu)
+                    .setDefaultValue(true)
+                    .setTooltip(Text.literal("Keep the gun rendered at your controller while this menu is open "
+                            + "(Vivecraft normally hides it), so you can align the reload zone / mag as you tune."))
+                    .setSaveConsumer(v -> cfg.showGunInMenu = v)
+                    .build());
             general.addEntry(eb.startFloatField(Text.literal("Magazine grab distance (blocks)"), cfg.magGrabDistance)
                     .setDefaultValue(0.1f)
                     .setMin(0.05f).setMax(1.0f)

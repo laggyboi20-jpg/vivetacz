@@ -75,19 +75,6 @@ public final class TaczBridge {
         }
     }
 
-    /** Read a (possibly private) field by name from an object via reflection, or null. */
-    public static Object getField(Object obj, String name) {
-        if (obj == null) return null;
-        try {
-            java.lang.reflect.Field f = vivetacz$findField(obj.getClass(), name);
-            if (f == null) return null;
-            f.setAccessible(true);
-            return f.get(obj);
-        } catch (Throwable t) {
-            return null;
-        }
-    }
-
     // ---- Item identity ----------------------------------------------------
     private static Class<?> iAmmoClass;
     private static boolean  iAmmoResolved;
@@ -106,25 +93,9 @@ public final class TaczBridge {
         return iAmmoClass != null && iAmmoClass.isInstance(item);
     }
 
-    /** True if the given ammo stack is valid ammo for the given gun stack. */
-    public static boolean isAmmoOfGun(Object ammoItem, Object ammoStack, Object gunStack) {
-        if (ammoItem == null) return false;
-        try {
-            Method m = find(ammoItem.getClass(), "isAmmoOfGun", 2);
-            return m != null && Boolean.TRUE.equals(m.invoke(ammoItem, ammoStack, gunStack));
-        } catch (Throwable t) {
-            return false;
-        }
-    }
-
     /** The gun id (e.g. "tacz:minigun") for a gun item stack, or null. */
     public static String getGunId(Object item, Object stack) {
         return idViaMethod(item, stack, "getGunId");
-    }
-
-    /** The ammo id for an ammo item stack, or null. */
-    public static String getAmmoId(Object item, Object stack) {
-        return idViaMethod(item, stack, "getAmmoId");
     }
 
     private static String idViaMethod(Object item, Object stack, String methodName) {
@@ -357,6 +328,60 @@ public final class TaczBridge {
         }
     }
 
+    private static boolean boolMethod(Object item, Object stack, String name) {
+        try {
+            Method m = find(item.getClass(), name, 1);
+            return m != null && Boolean.TRUE.equals(m.invoke(item, stack));
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    /** True if a round is chambered (closed-bolt guns show mag + this in the ammo count). */
+    public static boolean hasBulletInBarrel(Object item, Object stack) {
+        return boolMethod(item, stack, "hasBulletInBarrel");
+    }
+
+    /** True if the gun feeds directly from inventory ammo (e.g. the minigun) — no magazine. */
+    public static boolean useInventoryAmmo(Object item, Object stack) {
+        return boolMethod(item, stack, "useInventoryAmmo");
+    }
+
+    /** True if the gun uses internal "dummy" ammo rather than a removable magazine. */
+    public static boolean useDummyAmmo(Object item, Object stack) {
+        return boolMethod(item, stack, "useDummyAmmo");
+    }
+
+    /** True only for guns with a removable magazine — the ones our physical reload applies to. */
+    public static boolean isMagazineFed(Object item, Object stack) {
+        return !useInventoryAmmo(item, stack) && !useDummyAmmo(item, stack);
+    }
+
+    /** True if the gun uses an OPEN bolt (fires from open bolt → no chambered round, e.g. minigun,
+     *  RPG, grenade/break-action launchers). Open-bolt guns never add the "+1 in the barrel". */
+    public static boolean isOpenBolt(Object item, Object stack) {
+        try {
+            Object gunData = getGunData(item, stack);
+            if (gunData == null) return false;
+            Object bolt = invokeNoArg(gunData, "getBolt");
+            return bolt instanceof Enum && "OPEN_BOLT".equals(((Enum<?>) bolt).name());
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    /**
+     * Ammo count exactly as TaCZ's own HUD shows it: the magazine count plus one chambered
+     * round — but only for closed/manual-bolt guns (open-bolt guns don't chamber). Mirrors
+     * {@code GunHudOverlay}'s formula so our floating HUD matches the desktop HUD.
+     */
+    public static int getDisplayAmmoCount(Object item, Object stack) {
+        int count = getCurrentAmmoCount(item, stack);
+        if (count < 0) return count;
+        if (hasBulletInBarrel(item, stack) && !isOpenBolt(item, stack)) count += 1;
+        return count;
+    }
+
     /** Fire-mode label for a gun stack (e.g. "AUTO"), or empty string. */
     public static String getFireMode(Object item, Object stack) {
         try {
@@ -408,10 +433,11 @@ public final class TaczBridge {
     private static Method mGetClientGunIndex;
     private static boolean gunIndexResolved;
 
-    private static float getHeatMax(Object item, Object stack) {
+    /** Client-side {@code GunData} for a gun stack (via TimelessAPI.getClientGunIndex(id).getGunData()), or null. */
+    public static Object getGunData(Object item, Object stack) {
         try {
             Method getGunId = find(item.getClass(), "getGunId", 1);
-            if (getGunId == null) return -1f;
+            if (getGunId == null) return null;
             Object id = getGunId.invoke(item, stack);
 
             if (!gunIndexResolved) {
@@ -424,13 +450,20 @@ public final class TaczBridge {
                     }
                 }
             }
-            if (mGetClientGunIndex == null) return -1f;
+            if (mGetClientGunIndex == null) return null;
 
             Object opt = mGetClientGunIndex.invoke(null, id);
             Object index = (opt == null) ? null : opt.getClass().getMethod("orElse", Object.class).invoke(opt, (Object) null);
-            if (index == null) return -1f;
+            if (index == null) return null;
+            return invokeNoArg(index, "getGunData");
+        } catch (Throwable t) {
+            return null;
+        }
+    }
 
-            Object gunData = invokeNoArg(index, "getGunData");
+    private static float getHeatMax(Object item, Object stack) {
+        try {
+            Object gunData = getGunData(item, stack);
             if (gunData == null) return -1f;
             Object heatData = invokeNoArg(gunData, "getHeatData");
             if (heatData == null) return -1f;
@@ -537,8 +570,6 @@ public final class TaczBridge {
         } catch (Throwable ignored) {
         }
     }
-
-    // ---- Magazine node (the reload-animation mag geometry) ----------------
 
     // ---- Magazine node (the reload-animation mag geometry) ----------------
 

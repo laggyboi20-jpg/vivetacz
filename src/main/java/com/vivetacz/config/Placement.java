@@ -85,6 +85,6 @@ public class Placement {
 
     /** Aim offset (controller-forward → barrel): only yaw/pitch/roll used, pitch positive = down. */
     public static Placement aimOffsetDefault() {
-        return new Placement(0.0f, 0.0f, 0.0f, 0.0f, 40.0f, 0.0f, 1.0f);
+        return new Placement(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
     }
 }
