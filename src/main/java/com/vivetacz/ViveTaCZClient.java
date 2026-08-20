@@ -92,5 +92,7 @@ public final class ViveTaCZClient implements ClientModInitializer {
         // Draw the physical magazine + muzzle tracers in the world.
         WorldRenderEvents.AFTER_ENTITIES.register(MagazineReload::render);
         WorldRenderEvents.AFTER_ENTITIES.register(BulletTracers::render);
+        // Keep the gun visible while a config/menu screen is open (for aligning mags/zones).
+        WorldRenderEvents.AFTER_ENTITIES.register(com.vivetacz.client.MenuGunRenderer::render);
     }
 }
